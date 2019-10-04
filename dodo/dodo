@@ -1,0 +1,27 @@
+#!/usr/bin/python3
+"""Entrypoint for dodo"""
+
+import sys
+
+
+def print_usage():
+    """Print usage information"""
+    print("dodo is a simple test framework used to write tests for Python \
+        application")
+    print("dodo <filename>")
+
+
+def main(filename):
+    """Main function"""
+    pass
+
+
+if __name__ == "__main__":
+    try:
+        if len(sys.argv) < 2:
+            print_usage()
+            sys.exit(128)
+
+        main(sys.argv[1])
+    except Exception as exception:
+        print(exception)
