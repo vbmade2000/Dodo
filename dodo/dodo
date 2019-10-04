@@ -1,8 +1,25 @@
 #!/usr/bin/python3
 """Entrypoint for dodo"""
 
+import importlib
+import inspect
 import os
+import pkgutil
 import sys
+
+
+def get_modules_from_package(package_obj):
+    """Extracts all the modules from <package_obj> using pkgutil and returns
+       them. pkgutil.iter_items() returns output in format
+          [(FileFinder('/tmp/testdir'), 'best', True),
+           (FileFinder('/tmp/testdir'), 'test', False),
+           (FileFinder('/tmp/testdir'), 'test1', False)].
+       It is a named tuple in format (
+            importer, <package-name/module-name>, bool(ispackage)).
+    """
+    modules = [name for _, name, ispkg in
+               pkgutil.iter_modules(package_obj.__path__) if not ispkg]
+    return modules
 
 
 def print_usage():
@@ -12,13 +29,42 @@ def print_usage():
     print("dodo <test-directory>")
 
 
+def get_functions_from_module(module_obj):
+    """Extracts all the functions from <module_obj> using introspection API
+       and returns them.
+    """
+    functions = [member for member in
+                 inspect.getmembers(module_obj)
+                 if inspect.isfunction(member[1])]
+    return functions
+
+
 def main(test_dir):
     """Main function"""
-    # TODO: Use Python 3 Path module.
-    parent_dir = os.path.normpath(os.path.join(os.path.abspath(test_dir), ".."))
+    # TODO: Use Python 3 Path module
+
+    # Get the absolute path of supplied directory in case only directory name
+    # is supplied instead of full path
+    absolute_path = os.path.abspath(test_dir)
+
+    # Parent directory is a parent directory of a package. i.e In /tmp/testdir,
+    # /tmp is a parent directory
+    parent_dir = os.path.normpath(os.path.join(absolute_path, ".."))
+
+    # We need to put parent directory of package in PYTHON PATH to import it
     sys.path.append(parent_dir)
-    import testdir
-    print(dir(testdir))
+
+    # Get the basename of path. i.e In /tmp/testdir, testdir is a base name
+    package_name = os.path.basename(absolute_path)
+
+    # Import package dynamically
+    module_instance = importlib.import_module(package_name)
+
+    # Get modules from package
+    modules = get_modules_from_package(module_instance)
+    for module in modules:
+        tmp = importlib.import_module("{0}.{1}".format(package_name, module))
+        print(get_functions_from_module(tmp))
 
 
 if __name__ == "__main__":
