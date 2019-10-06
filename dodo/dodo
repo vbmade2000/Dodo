@@ -32,6 +32,9 @@ def print_usage():
 def get_functions_from_module(module_obj):
     """Extracts all the functions from <module_obj> using introspection API
        and returns them.
+       Example of return value of inspect.getmembers is following one.
+       [('test1', <function test1 at 0x7f1e2761a7b8>),
+        ('test2', <function test2 at 0x7f1e2761a840>)]
     """
     functions = [member for member in
                  inspect.getmembers(module_obj)
@@ -51,20 +54,38 @@ def main(test_dir):
     # /tmp is a parent directory
     parent_dir = os.path.normpath(os.path.join(absolute_path, ".."))
 
-    # We need to put parent directory of package in PYTHON PATH to import it
+    # We need to put parent directory of package in PYTHONPATH to import it
     sys.path.append(parent_dir)
 
     # Get the basename of path. i.e In /tmp/testdir, testdir is a base name
     package_name = os.path.basename(absolute_path)
 
     # Import package dynamically
-    module_instance = importlib.import_module(package_name)
+    package_instance = importlib.import_module(package_name)
 
     # Get modules from package
-    modules = get_modules_from_package(module_instance)
+    modules = get_modules_from_package(package_instance)
+
+    # Dictionary with {<module_name>:<[functions]>}
+    module_functions = dict()
+
+    # Iterate through all the modules and extract functions from them
     for module in modules:
         tmp = importlib.import_module("{0}.{1}".format(package_name, module))
-        print(get_functions_from_module(tmp))
+        functions = get_functions_from_module(tmp)
+        function_list = module_functions.get(module, [])
+        function_list.extend(functions)
+        module_functions[module] = function_list
+
+    # Iterate through module_functions dictionary and execute each function
+    # for all the modules.
+    for module_name, function_list in module_functions.items():
+        for function in function_list:
+            try:
+                # Execute function
+                function[1]()
+            except Exception as e:
+                print(e)
 
 
 if __name__ == "__main__":
