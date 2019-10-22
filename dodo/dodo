@@ -9,6 +9,27 @@ import sys
 import traceback
 
 
+class TextColors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[32m'
+    WARNING = '\033[93m'
+    FAIL = '\033[31m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
+def print_red(text):
+    """Prints <text> in Red color on console"""
+    print(TextColors.BOLD + TextColors.FAIL + text + TextColors.ENDC)
+
+
+def print_green(text):
+    """Prints <text> in Green color on console"""
+    print(TextColors.BOLD + TextColors.OKGREEN + text + TextColors.ENDC)
+
+
 def get_modules_from_package(package_obj):
     """Extracts all the modules from <package_obj> using pkgutil and returns
        them. pkgutil.iter_items() returns output in format
@@ -46,6 +67,10 @@ def get_functions_from_module(module_obj):
 def main(test_dir):
     """Main function"""
     # TODO: Use Python 3 Path module
+    # TODO: Import package and modules recursively
+
+    # Result constants
+    result_constants = {0: "Fail", 1: "Pass"}
 
     # Get the absolute path of supplied directory in case only directory name
     # is supplied instead of full path
@@ -72,11 +97,21 @@ def main(test_dir):
 
     # Iterate through all the modules and extract functions from them
     for module in modules:
-        tmp = importlib.import_module("{0}.{1}".format(package_name, module))
-        functions = get_functions_from_module(tmp)
-        function_list = module_functions.get(module, [])
-        function_list.extend(functions)
-        module_functions[module] = function_list
+        try:
+            tmp = importlib.import_module(
+                    "{0}.{1}".format(package_name, module))
+            functions = get_functions_from_module(tmp)
+            function_list = module_functions.get(module, [])
+            function_list.extend(functions)
+            module_functions[module] = function_list
+        except Exception as exce:
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            print("".join(
+                (traceback.format_exception(exc_type, exc_value, exc_tb))))
+
+    # Store test function name with result pass/fail. We store 0 for
+    # Failed and 1 for Pass
+    function_results = dict()
 
     # Iterate through <module_functions> dictionary and execute each function
     # for all the modules.
@@ -85,10 +120,24 @@ def main(test_dir):
             try:
                 # Execute function
                 function[1]()
-            except Exception as e:
+                function_results[function[1].__name__] = 1
+            except Exception as exce:
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 print("".join(
                     (traceback.format_exception(exc_type, exc_value, exc_tb))))
+                function_results[function[1].__name__] = 0
+
+    print("RESULTS")
+    print("========================================================")
+
+    # Print results
+    for module_name, result in function_results.items():
+        if result:
+            print_green(
+                "{0} - {1}".format(module_name, result_constants[result]))
+        else:
+            print_red(
+                "{0} - {1}".format(module_name, result_constants[result]))
 
 
 if __name__ == "__main__":
