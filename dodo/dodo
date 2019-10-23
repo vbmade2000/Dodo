@@ -8,68 +8,8 @@ import pkgutil
 import sys
 import traceback
 
-
-class ColorPrinter(object):
-    """Contains constants for text colors and methods to print colored text"""
-    # pylint: disable=too-few-public-methods
-
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    OKGREEN = "\033[32m"
-    WARNING = "\033[93m"
-    FAIL = "\033[31m"
-    ENDC = "\033[0m"
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
-
-    @staticmethod
-    def print_red(text):
-        """Prints <text> in Red color on console
-           TODO: Use Python3.6 f-string here
-        """
-        print(ColorPrinter.BOLD + ColorPrinter.FAIL + text + ColorPrinter.ENDC)
-
-    @staticmethod
-    def print_green(text):
-        """Prints <text> in Green color on console
-           TODO: Use Python3.6 f-string here
-        """
-        print(ColorPrinter.BOLD + ColorPrinter.OKGREEN + text + ColorPrinter.ENDC)
-
-
-class Introspector(object):
-    """Provides functionality to introspect python packages and modules"""
-
-    def __init__(self):
-        """Init method"""
-        pass
-
-    @staticmethod
-    def get_modules_from_package(package_obj):
-        """Extracts all the modules from <package_obj> using pkgutil and returns
-           them. pkgutil.iter_items() returns output in format
-              [(FileFinder("/tmp/testdir"), "best", True),
-               (FileFinder("/tmp/testdir"), "test", False),
-               (FileFinder("/tmp/testdir"), "test1", False)].
-           It is a named tuple in format (
-                importer, <package-name/module-name>, bool(ispackage)).
-        """
-        modules = [name for _, name, ispkg in
-                   pkgutil.iter_modules(package_obj.__path__) if not ispkg]
-        return modules
-
-    @staticmethod
-    def get_functions_from_module(module_obj):
-        """Extracts all the functions from <module_obj> using introspection API
-           and returns them.
-           Example of return value of inspect.getmembers is following one.
-           [("test1", <function test1 at 0x7f1e2761a7b8>),
-            ("test2", <function test2 at 0x7f1e2761a840>)]
-        """
-        functions = [member for member in
-                     inspect.getmembers(module_obj)
-                     if inspect.isfunction(member[1])]
-        return functions
+from dodo.color_printer import ColorPrinter
+from dodo.introspector import Introspector
 
 
 class Dodo(object):
@@ -86,11 +26,13 @@ class Dodo(object):
         # Failed and 1 for Pass
         self._functions_results = dict()
 
+        # Dictionary with {<module_name>:<[functions]>}
+        self._module_functions = dict()
+
     def execute_tests(self):
         """Execute tests"""
         # TODO: Use Python 3 Path module
         # TODO: Import package and modules recursively
-
 
         # Get the absolute path of supplied directory in case only directory name
         # is supplied instead of full path
@@ -112,10 +54,15 @@ class Dodo(object):
         # Get modules from package
         modules = Introspector.get_modules_from_package(package_instance)
 
-        # Dictionary with {<module_name>:<[functions]>}
-        module_functions = dict()
+        self._module_functions = self._populate_module_functions_list(modules, package_name)
 
-        # Iterate through all the modules and extract functions from them
+        self._functions_results = self._execute_test_functions(self._module_functions)
+
+    def _populate_module_functions_list(self, modules, package_name):
+        """Iterate through all the modules and return dictionary with
+           <module-name>:<[functions]>
+        """
+        module_functions = dict() 
         for module in modules:
             try:
                 tmp = importlib.import_module(
@@ -128,21 +75,25 @@ class Dodo(object):
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 print("".join(
                     (traceback.format_exception(exc_type, exc_value, exc_tb))))
+        return module_functions
 
-
-        # Iterate through <module_functions> dictionary and execute each function
-        # for all the modules.
+    def _execute_test_functions(self, module_functions):
+        """Iterate through module_functions dictionary and execute each function
+           for all the modules.
+        """
+        results = dict()
         for module_name, function_list in module_functions.items():
             for function in function_list:
                 try:
                     # Execute function
                     function[1]()
-                    self._functions_results[function[1].__name__] = 1
+                    results[function[1].__name__] = 1
                 except Exception as exce:
                     exc_type, exc_value, exc_tb = sys.exc_info()
                     print("".join(
                         (traceback.format_exception(exc_type, exc_value, exc_tb))))
-                    self._functions_results[function[1].__name__] = 0
+                    results[function[1].__name__] = 0
+        return results
          
     def get_result(self):
         """Returns a dictionary of <function-name>:<0|1>"""
