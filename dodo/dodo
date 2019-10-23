@@ -9,123 +9,159 @@ import sys
 import traceback
 
 
-class TextColors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[32m'
-    WARNING = '\033[93m'
-    FAIL = '\033[31m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+class ColorPrinter(object):
+    """Contains constants for text colors and methods to print colored text"""
+    # pylint: disable=too-few-public-methods
+
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKGREEN = "\033[32m"
+    WARNING = "\033[93m"
+    FAIL = "\033[31m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+
+    @staticmethod
+    def print_red(text):
+        """Prints <text> in Red color on console
+           TODO: Use Python3.6 f-string here
+        """
+        print(ColorPrinter.BOLD + ColorPrinter.FAIL + text + ColorPrinter.ENDC)
+
+    @staticmethod
+    def print_green(text):
+        """Prints <text> in Green color on console
+           TODO: Use Python3.6 f-string here
+        """
+        print(ColorPrinter.BOLD + ColorPrinter.OKGREEN + text + ColorPrinter.ENDC)
 
 
-def print_red(text):
-    """Prints <text> in Red color on console"""
-    print(TextColors.BOLD + TextColors.FAIL + text + TextColors.ENDC)
+class Introspector(object):
+    """Provides functionality to introspect python packages and modules"""
+
+    def __init__(self):
+        """Init method"""
+        pass
+
+    @staticmethod
+    def get_modules_from_package(package_obj):
+        """Extracts all the modules from <package_obj> using pkgutil and returns
+           them. pkgutil.iter_items() returns output in format
+              [(FileFinder("/tmp/testdir"), "best", True),
+               (FileFinder("/tmp/testdir"), "test", False),
+               (FileFinder("/tmp/testdir"), "test1", False)].
+           It is a named tuple in format (
+                importer, <package-name/module-name>, bool(ispackage)).
+        """
+        modules = [name for _, name, ispkg in
+                   pkgutil.iter_modules(package_obj.__path__) if not ispkg]
+        return modules
+
+    @staticmethod
+    def get_functions_from_module(module_obj):
+        """Extracts all the functions from <module_obj> using introspection API
+           and returns them.
+           Example of return value of inspect.getmembers is following one.
+           [("test1", <function test1 at 0x7f1e2761a7b8>),
+            ("test2", <function test2 at 0x7f1e2761a840>)]
+        """
+        functions = [member for member in
+                     inspect.getmembers(module_obj)
+                     if inspect.isfunction(member[1])]
+        return functions
 
 
-def print_green(text):
-    """Prints <text> in Green color on console"""
-    print(TextColors.BOLD + TextColors.OKGREEN + text + TextColors.ENDC)
-
-
-def get_modules_from_package(package_obj):
-    """Extracts all the modules from <package_obj> using pkgutil and returns
-       them. pkgutil.iter_items() returns output in format
-          [(FileFinder('/tmp/testdir'), 'best', True),
-           (FileFinder('/tmp/testdir'), 'test', False),
-           (FileFinder('/tmp/testdir'), 'test1', False)].
-       It is a named tuple in format (
-            importer, <package-name/module-name>, bool(ispackage)).
-    """
-    modules = [name for _, name, ispkg in
-               pkgutil.iter_modules(package_obj.__path__) if not ispkg]
-    return modules
-
-
-def print_usage():
-    """Print usage information"""
-    print("dodo is a simple test framework used to write tests for Python \
-        application")
-    print("dodo <test-directory>")
-
-
-def get_functions_from_module(module_obj):
-    """Extracts all the functions from <module_obj> using introspection API
-       and returns them.
-       Example of return value of inspect.getmembers is following one.
-       [('test1', <function test1 at 0x7f1e2761a7b8>),
-        ('test2', <function test2 at 0x7f1e2761a840>)]
-    """
-    functions = [member for member in
-                 inspect.getmembers(module_obj)
-                 if inspect.isfunction(member[1])]
-    return functions
-
-
-def main(test_dir):
-    """Main function"""
-    # TODO: Use Python 3 Path module
-    # TODO: Import package and modules recursively
+class Dodo(object):
+    """Main class that contains a logic to run tests"""
 
     # Result constants
-    result_constants = {0: "Fail", 1: "Pass"}
+    RESULT_CONSTANTS = {0: "Fail", 1: "Pass"}
 
-    # Get the absolute path of supplied directory in case only directory name
-    # is supplied instead of full path
-    absolute_path = os.path.abspath(test_dir)
+    def __init__(self, package_directory):
+        """Init method"""
+        self._package_dir = package_directory
 
-    # Parent directory is a parent directory of a package. i.e In /tmp/testdir,
-    # /tmp is a parent directory
-    parent_dir = os.path.normpath(os.path.join(absolute_path, ".."))
+        # Store test function name with result pass/fail. We store 0 for
+        # Failed and 1 for Pass
+        self._functions_results = dict()
 
-    # We need to put parent directory of package in PYTHONPATH to import it
-    sys.path.append(parent_dir)
+    def execute_tests(self):
+        """Execute tests"""
+        # TODO: Use Python 3 Path module
+        # TODO: Import package and modules recursively
 
-    # Get the basename of path. i.e In /tmp/testdir, testdir is a base name
-    package_name = os.path.basename(absolute_path)
 
-    # Import package dynamically
-    package_instance = importlib.import_module(package_name)
+        # Get the absolute path of supplied directory in case only directory name
+        # is supplied instead of full path
+        absolute_path = os.path.abspath(self._package_dir)
 
-    # Get modules from package
-    modules = get_modules_from_package(package_instance)
+        # Parent directory is a parent directory of a package. i.e In /tmp/testdir,
+        # /tmp is a parent directory
+        parent_dir = os.path.normpath(os.path.join(absolute_path, ".."))
 
-    # Dictionary with {<module_name>:<[functions]>}
-    module_functions = dict()
+        # We need to put parent directory of package in PYTHONPATH to import it
+        sys.path.append(parent_dir)
 
-    # Iterate through all the modules and extract functions from them
-    for module in modules:
-        try:
-            tmp = importlib.import_module(
-                    "{0}.{1}".format(package_name, module))
-            functions = get_functions_from_module(tmp)
-            function_list = module_functions.get(module, [])
-            function_list.extend(functions)
-            module_functions[module] = function_list
-        except Exception as exce:
-            exc_type, exc_value, exc_tb = sys.exc_info()
-            print("".join(
-                (traceback.format_exception(exc_type, exc_value, exc_tb))))
+        # Get the basename of path. i.e In /tmp/testdir, testdir is a base name
+        package_name = os.path.basename(absolute_path)
 
-    # Store test function name with result pass/fail. We store 0 for
-    # Failed and 1 for Pass
-    function_results = dict()
+        # Import package dynamically
+        package_instance = importlib.import_module(package_name)
 
-    # Iterate through <module_functions> dictionary and execute each function
-    # for all the modules.
-    for module_name, function_list in module_functions.items():
-        for function in function_list:
+        # Get modules from package
+        modules = Introspector.get_modules_from_package(package_instance)
+
+        # Dictionary with {<module_name>:<[functions]>}
+        module_functions = dict()
+
+        # Iterate through all the modules and extract functions from them
+        for module in modules:
             try:
-                # Execute function
-                function[1]()
-                function_results[function[1].__name__] = 1
+                tmp = importlib.import_module(
+                    "{0}.{1}".format(package_name, module))
+                functions = Introspector.get_functions_from_module(tmp)
+                function_list = module_functions.get(module, [])
+                function_list.extend(functions)
+                module_functions[module] = function_list
             except Exception as exce:
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 print("".join(
                     (traceback.format_exception(exc_type, exc_value, exc_tb))))
-                function_results[function[1].__name__] = 0
+
+
+        # Iterate through <module_functions> dictionary and execute each function
+        # for all the modules.
+        for module_name, function_list in module_functions.items():
+            for function in function_list:
+                try:
+                    # Execute function
+                    function[1]()
+                    self._functions_results[function[1].__name__] = 1
+                except Exception as exce:
+                    exc_type, exc_value, exc_tb = sys.exc_info()
+                    print("".join(
+                        (traceback.format_exception(exc_type, exc_value, exc_tb))))
+                    self._functions_results[function[1].__name__] = 0
+         
+    def get_result(self):
+        """Returns a dictionary of <function-name>:<0|1>"""
+        return self._functions_results
+
+    @staticmethod
+    def print_usage(self):
+        """Print usage information"""
+        print("dodo is a simple test framework used to write tests for Python \
+            application")
+        print("dodo <test-directory>")
+
+
+def main(test_dir):
+    """Main function"""
+
+    dodo = Dodo(test_dir)
+    dodo.execute_tests()
+    function_results = dodo.get_result()
 
     print("RESULTS")
     print("========================================================")
@@ -133,17 +169,17 @@ def main(test_dir):
     # Print results
     for module_name, result in function_results.items():
         if result:
-            print_green(
-                "{0} - {1}".format(module_name, result_constants[result]))
+            ColorPrinter.print_green(
+                "{0} - {1}".format(module_name, Dodo.RESULT_CONSTANTS[result]))
         else:
-            print_red(
-                "{0} - {1}".format(module_name, result_constants[result]))
+            ColorPrinter.print_red(
+                "{0} - {1}".format(module_name, Dodo.RESULT_CONSTANTS[result]))
 
 
 if __name__ == "__main__":
     try:
         if len(sys.argv) < 2:
-            print_usage()
+            Dodo.print_usage()
             sys.exit(128)
 
         main(sys.argv[1])
