@@ -7,6 +7,21 @@ from dodo.color_printer import ColorPrinter
 from dodo.dodo_runner import Dodo
 
 
+def print_results(test_results):
+    """Prints a result in nice formatted manner"""
+    print("RESULTS")
+    print("=" * 50)
+
+    # Print results
+    for func_name, result in test_results.items():
+        if result:
+            ColorPrinter.print_green(
+                "{0} - {1}".format(func_name, Dodo.RESULT_CONSTANTS[result]))
+        else:
+            ColorPrinter.print_red(
+                "{0} - {1}".format(func_name, Dodo.RESULT_CONSTANTS[result]))
+
+
 def main(test_dir):
     """Main function
        It's a wrapper function over Dodo class which actually executes tests
@@ -15,19 +30,8 @@ def main(test_dir):
 
     dodo = Dodo(test_dir)
     dodo.execute_tests()
-    function_results = dodo.get_result()
-
-    print("RESULTS")
-    print("=" * 50)
-
-    # Print results
-    for module_name, result in function_results.items():
-        if result:
-            ColorPrinter.print_green(
-                "{0} - {1}".format(module_name, Dodo.RESULT_CONSTANTS[result]))
-        else:
-            ColorPrinter.print_red(
-                "{0} - {1}".format(module_name, Dodo.RESULT_CONSTANTS[result]))
+    test_results = dodo.get_result()
+    print_results(test_results)
 
 
 if __name__ == "__main__":
