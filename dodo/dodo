@@ -22,13 +22,34 @@ def print_results(test_results):
                 "{0} - {1}".format(func_name, Dodo.RESULT_CONSTANTS[result]))
 
 
-def main(test_dir):
+def main(arguments):
     """Main function
        It's a wrapper function over Dodo class which actually executes tests
        and returns results.
     """
+    test_dir = ""
+    json_file = None
 
-    dodo = Dodo(test_dir)
+    for arg in arguments:
+        if "testdir" in arg:
+            test_dir = arg
+        if "jsonfile" in arg:
+            json_file = arg
+
+    # Check for valid test package directory
+    test_dir = test_dir.split("=")
+    if len(test_dir) != 2 or test_dir[1].strip() == "":
+        print("Please enter valid package directory")
+        sys.exit(128)
+
+    # Check for valid json file
+    if json_file:
+        json_file = json_file.split("=")
+        if len(json_file) != 2 or json_file[1].strip() == "":
+            print("Please enter valid JSON file name")
+            sys.exit(128)
+
+    dodo = Dodo(test_dir[1])
     dodo.execute_tests()
     test_results = dodo.get_result()
     print_results(test_results)
@@ -36,10 +57,19 @@ def main(test_dir):
 
 if __name__ == "__main__":
     try:
+        test_dir_supplied = False
         if len(sys.argv) < 2:
             Dodo.print_usage()
             sys.exit(128)
+        for arg in sys.argv:
+            if "testdir" in arg:
+                test_dir_supplied = True
+                break
+        if not test_dir_supplied:
+            print("Please enter package directory to test")
+            sys.exit(128)
 
-        main(sys.argv[1])
+        print(sys.argv)
+        main(sys.argv)
     except Exception as exception:
         print(exception)
