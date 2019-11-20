@@ -2,6 +2,8 @@
 
 import inspect
 import pkgutil
+from pkgutil import iter_modules
+from setuptools import find_packages
 
 
 class Introspector(object):
@@ -9,7 +11,7 @@ class Introspector(object):
 
     def __init__(self):
         """Init method"""
-        pass
+        super().__init__()
 
     @staticmethod
     def get_modules_from_package(package_obj):
@@ -37,3 +39,19 @@ class Introspector(object):
                      inspect.getmembers(module_obj)
                      if inspect.isfunction(member[1])]
         return functions
+
+    @staticmethod
+    def find_modules(path):
+        """Extract modules from <path> recursively using functionality from
+           setuptools.
+           NOTE: It doesn't extract modules from top level directory
+           of a package.
+        """
+        modules = set()
+        for pkg in find_packages(path):
+            modules.add(pkg)
+            pkgpath = path + '/' + pkg.replace('.', '/')
+            for _, name, ispkg in iter_modules([pkgpath]):
+                if not ispkg:
+                    modules.add(pkg + '.' + name)
+        return modules

@@ -30,7 +30,6 @@ class Dodo(object):
     def execute_tests(self):
         """Execute tests"""
         # TODO: Use Python 3 Path module
-        # TODO: Import package and modules recursively
 
         # Get the absolute path of supplied directory in case only directory
         # name is supplied instead of full path
@@ -46,12 +45,21 @@ class Dodo(object):
         # Get the basename of path. i.e In /tmp/testdir, testdir is a base name
         package_name = os.path.basename(absolute_path)
 
-        # Import package dynamically
+        # NOTE: Introspector.find_modules method doesn't retrieve modules
+        # from top level directory of a package, so We need to process that
+        # separately.
+
+        # Import package dynamically to get modules in top level directory
         package_instance = importlib.import_module(package_name)
 
-        # Get modules from package
+        # Get modules from top level package directory
         modules = Introspector.get_modules_from_package(package_instance)
 
+        # Get modules recursively
+        all_modules = Introspector.find_modules(self._package_dir)
+        modules.extend(all_modules)
+
+        # Get functions from all the modules
         self._module_functions = self._populate_module_functions_list(
             modules, package_name)
 
@@ -78,8 +86,8 @@ class Dodo(object):
         return module_functions
 
     def _execute_test_functions(self, module_functions):
-        """Iterate through module_functions dictionary and execute each function
-           for all the modules.
+        """Iterate through module_functions dictionary and execute each
+           function for all the modules.
         """
         results = dict()
         for _, function_list in module_functions.items():
@@ -88,7 +96,7 @@ class Dodo(object):
                     # Execute function
                     function[1]()
                     results[function[1].__name__] = 1
-                except Exception as _:
+                except Exception:
                     exc_type, exc_value, exc_tb = sys.exc_info()
                     print("".join(
                         (traceback.format_exception(
