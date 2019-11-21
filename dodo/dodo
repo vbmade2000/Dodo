@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """Entrypoint for dodo"""
 
-import sys
+import argparse
 
 from dodo.color_printer import ColorPrinter
 from dodo.dodo_runner import Dodo
@@ -22,34 +22,12 @@ def print_results(test_results):
                 "{0} - {1}".format(func_name, Dodo.RESULT_CONSTANTS[result]))
 
 
-def main(arguments):
+def main(testdirectory, file_format, output_file=None):
     """Main function
        It's a wrapper function over Dodo class which actually executes tests
        and returns results.
     """
-    test_dir = ""
-    json_file = None
-
-    for arg in arguments:
-        if "testdir" in arg:
-            test_dir = arg
-        if "jsonfile" in arg:
-            json_file = arg
-
-    # Check for valid test package directory
-    test_dir = test_dir.split("=")
-    if len(test_dir) != 2 or test_dir[1].strip() == "":
-        print("Please enter valid package directory")
-        sys.exit(128)
-
-    # Check for valid json file
-    if json_file:
-        json_file = json_file.split("=")
-        if len(json_file) != 2 or json_file[1].strip() == "":
-            print("Please enter valid JSON file name")
-            sys.exit(128)
-
-    dodo = Dodo(test_dir[1])
+    dodo = Dodo(testdirectory)
     dodo.execute_tests()
     test_results = dodo.get_result()
     print_results(test_results)
@@ -57,19 +35,18 @@ def main(arguments):
 
 if __name__ == "__main__":
     try:
-        test_dir_supplied = False
-        if len(sys.argv) < 2:
-            Dodo.print_usage()
-            sys.exit(128)
-        for arg in sys.argv:
-            if "testdir" in arg:
-                test_dir_supplied = True
-                break
-        if not test_dir_supplied:
-            print("Please enter package directory to test")
-            sys.exit(128)
-
-        print(sys.argv)
-        main(sys.argv)
+        parser = argparse.ArgumentParser(
+            description="Dodo - The Python functional test runner")
+        parser.add_argument(
+            "testdirectory",
+            help="Path to the python package containing tests",
+            type=str)
+        parser.add_argument(
+            "-f", "--file", help="Path to the output file", type=str)
+        parser.add_argument(
+            "-o", "--format", help="Output file format",
+            type=str, choices=["json", "xml"], default="json")
+        arguments = parser.parse_args()
+        main(arguments.testdirectory, arguments.format, arguments.file)
     except Exception as exception:
         print(exception)
