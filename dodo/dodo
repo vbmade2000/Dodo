@@ -5,6 +5,7 @@ import argparse
 
 from dodo.color_printer import ColorPrinter
 from dodo.dodo_runner import Dodo
+from dodo.formatters import formatter_factory
 
 
 def print_results(test_results):
@@ -22,15 +23,41 @@ def print_results(test_results):
                 "{0} - {1}".format(func_name, Dodo.RESULT_CONSTANTS[result]))
 
 
+def write_to_file(data, output_filename="result.txt"):
+    """Writes <data> to file"""
+    with open(output_filename, "w") as outfile:
+        outfile.write(data)
+
+
 def main(testdirectory, file_format, output_file=None):
     """Main function
        It's a wrapper function over Dodo class which actually executes tests
        and returns results.
     """
+    output_formatter = None
     dodo = Dodo(testdirectory)
     dodo.execute_tests()
-    test_results = dodo.get_result()
-    print_results(test_results)
+    results = dodo.get_result()
+    output_formatter = formatter_factory.FormatterFactory.get_formatter(
+        file_format)
+    output_formatter.result = results
+    output_formatter.convert()
+    results = output_formatter.get_converted_result()
+
+    if file_format != "text":
+        print(results)
+    else:
+        print_results(results)
+    if output_file:
+        data_to_write = ""
+        if file_format == "text":
+            result_list = []
+            for func_name, result in results.items():
+                result_list.append(f"{func_name} - {result}")
+            data_to_write = "\n".join(result_list)
+        else:
+            data_to_write = results
+        write_to_file(data_to_write)
 
 
 if __name__ == "__main__":
@@ -45,7 +72,7 @@ if __name__ == "__main__":
             "-f", "--file", help="Path to the output file", type=str)
         parser.add_argument(
             "-o", "--format", help="Output file format",
-            type=str, choices=["json", "xml"], default="json")
+            type=str, choices=["json", "text"], default="text")
         arguments = parser.parse_args()
         main(arguments.testdirectory, arguments.format, arguments.file)
     except Exception as exception:
