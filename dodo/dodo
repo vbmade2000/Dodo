@@ -1,7 +1,10 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.6
 """Entrypoint for dodo"""
 
 import argparse
+import re
+import sys
+from pathlib import Path
 
 from dodo.color_printer import ColorPrinter
 from dodo.dodo_runner import Dodo
@@ -29,13 +32,14 @@ def write_to_file(data, output_filename="result.txt"):
         outfile.write(data)
 
 
-def main(testdirectory, file_format, output_file=None):
+def main(testdirectory, file_format, output_file=None,
+         _test_regex=None, _testplan=None):
     """Main function
        It's a wrapper function over Dodo class which actually executes tests
        and returns results.
     """
     output_formatter = None
-    dodo = Dodo(testdirectory)
+    dodo = Dodo(testdirectory, test_regex=_test_regex, testplan=_testplan)
     dodo.execute_tests()
     results = dodo.get_result()
     output_formatter = formatter_factory.FormatterFactory.get_formatter(
@@ -62,18 +66,70 @@ def main(testdirectory, file_format, output_file=None):
 
 if __name__ == "__main__":
     try:
+        compiled_regex = None
+        testplan = set()
+
+        # Create a main parser object.
         parser = argparse.ArgumentParser(
             description="Dodo - The Python functional test runner")
+
+        # We have two mutually exclusive options. First is to take a file
+        # containing testplan and second is a regex which will be used to
+        # match test function name to be executed. argparse package has a
+        # functionality called mutually exclusive group which we can leverage
+        # to add these options.
+        test_group = parser.add_mutually_exclusive_group()
+
+        # This option takes testplan. A testplan is a text file containing
+        # name of a test function to be executed, in each line.
+        test_group.add_argument("-t", "--testplan",
+                                help="File containing test plan", type=str)
+
+        # This option takes RegEx as an input. This RegEx will be used to
+        # match the name of function to be tested. So only those functions
+        # will be executed whose names satisfy supplied RegEx.
+        test_group.add_argument("-r", "--regex",
+                                help="RegEx to match the test function name.\
+                                Ex. test_os_*", type=str)
+
+        # This option takes name of directory as input. This is the directory
+        # that contains the Python modules containing test functions.
         parser.add_argument(
             "testdirectory",
             help="Path to the python package containing tests",
             type=str)
+
+        # This option takes filename as input. Dodo will dump the result
+        # in this file.
         parser.add_argument(
             "-f", "--file", help="Path to the output file", type=str)
+
+        # This option takes output format as input. Dodo will convert
+        # result to the format supplied here.
         parser.add_argument(
-            "-o", "--format", help="Output file format",
+            "-o", "--format", help="Output format",
             type=str, choices=["json", "text"], default="text")
+
         arguments = parser.parse_args()
-        main(arguments.testdirectory, arguments.format, arguments.file)
+
+        # We shall pass compiled RegEx object. It is more efficient when
+        # you want to match multiple strings with single RegEx.
+        if arguments.regex and len(arguments.regex.strip()) > 0:
+            compiled_regex = re.compile(arguments.regex)
+
+        # Check if the file containing testplan exists
+        if arguments.testplan and len(arguments.testplan.strip()) > 0:
+            # Each line contains a name of function to be executed.
+            # Read each line and create a set entry from it.
+            # The reason we have used set instead of list is to avoid
+            # duplication.
+            testplan_add = testplan.add
+            with open(arguments.testplan) as testplan_file:
+                for line in testplan_file:
+                    testplan_add(line.strip("\n"))
+
+        main(arguments.testdirectory, arguments.format, arguments.file,
+             compiled_regex, testplan)
+
     except Exception as exception:
         print(exception)

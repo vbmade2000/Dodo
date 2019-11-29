@@ -16,7 +16,7 @@ class Dodo(object):
     # Result constants
     RESULT_CONSTANTS = {0: "Fail", 1: "Pass"}
 
-    def __init__(self, package_directory):
+    def __init__(self, package_directory, test_regex=None, testplan=None):
         """Init method"""
         self._package_dir = package_directory
 
@@ -26,6 +26,9 @@ class Dodo(object):
 
         # Dictionary with {<module_name>:<[functions]>}
         self._module_functions = dict()
+
+        self._testregex = test_regex
+        self._testplan = testplan
 
     def execute_tests(self):
         """Execute tests"""
@@ -71,12 +74,14 @@ class Dodo(object):
            <module-name>:<[functions]>
         """
         module_functions = dict()
+        module_functions_get = module_functions.get
         for module in modules:
             try:
                 tmp = importlib.import_module(
                     "{0}.{1}".format(package_name, module))
-                functions = Introspector.get_functions_from_module(tmp)
-                function_list = module_functions.get(module, [])
+                functions = Introspector.get_functions_from_module(
+                    tmp, self._testregex, self._testplan)
+                function_list = module_functions_get(module, [])
                 function_list.extend(functions)
                 module_functions[module] = function_list
             except Exception as _:

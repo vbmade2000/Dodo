@@ -28,17 +28,32 @@ class Introspector(object):
         return modules
 
     @staticmethod
-    def get_functions_from_module(module_obj):
+    def get_functions_from_module(module_obj, _test_regex=None,
+                                  _testplan=None):
         """Extracts all the functions from <module_obj> using introspection API
            and returns them.
            Example of return value of inspect.getmembers is following one.
            [("test1", <function test1 at 0x7f1e2761a7b8>),
             ("test2", <function test2 at 0x7f1e2761a840>)]
         """
-        functions = [member for member in
-                     inspect.getmembers(module_obj)
-                     if inspect.isfunction(member[1]) and
-                     member[0].startswith("test")]
+        functions = None
+        if _test_regex is not None:
+            functions = [member for member in
+                         inspect.getmembers(module_obj)
+                         if inspect.isfunction(member[1]) and
+                         member[0].startswith("test") and
+                         _test_regex.match(member[0])]
+        elif _testplan is not None:
+            functions = [member for member in
+                         inspect.getmembers(module_obj)
+                         if inspect.isfunction(member[1]) and
+                         member[0].startswith("test") and
+                         member[0] in _testplan]
+        else:
+            functions = [member for member in
+                         inspect.getmembers(module_obj)
+                         if inspect.isfunction(member[1]) and
+                         member[0].startswith("test")]
         return functions
 
     @staticmethod
