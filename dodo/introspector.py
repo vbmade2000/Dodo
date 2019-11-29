@@ -37,7 +37,8 @@ class Introspector(object):
         """
         functions = [member for member in
                      inspect.getmembers(module_obj)
-                     if inspect.isfunction(member[1])]
+                     if inspect.isfunction(member[1]) and
+                     member[0].startswith("test")]
         return functions
 
     @staticmethod
