@@ -20,3 +20,7 @@ class TestColorPrinter(unittest.TestCase):
         expected_output = "\x1b[1m\x1b[32mTest text\x1b[0m\n"
         ColorPrinter.print_green("Test text")
         self.assertEqual(mock_stdout.getvalue(), expected_output)
+
+
+if __name__ == "__main__":
+    unittest.main()
