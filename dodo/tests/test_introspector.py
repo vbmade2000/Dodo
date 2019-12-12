@@ -96,6 +96,22 @@ class TestIntrospector(unittest.TestCase):
             self.assertEqual(
                 isinstance(actual_value[0][1], types.FunctionType), True)
 
+    def test_find_modules(self):
+        """Test find_modules method"""
+        test_path = "/some/test/path"
+        find_packages_return_value = [
+            "/test/path1", "/test/path2", "/test/path3"]
+
+        # Patch setuptools module
+        with patch("dodo.introspector.find_packages") as mock_find_packages,\
+                patch("dodo.introspector.iter_modules") as mock_iter_modules:
+            mock_find_packages.return_value = find_packages_return_value
+            actual_output = Introspector.find_modules(test_path)
+            self.assertEqual(set(find_packages_return_value), actual_output)
+            self.assertEqual(mock_find_packages.call_count, 1)
+            self.assertEqual(mock_iter_modules.call_count, len(find_packages_return_value))
+
+
 
 if __name__ == "__main__":
     unittest.main()
