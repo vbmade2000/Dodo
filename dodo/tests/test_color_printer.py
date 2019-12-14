@@ -15,7 +15,7 @@ class TestColorPrinter(unittest.TestCase):
         self.assertEqual(mock_stdout.getvalue(), expected_output)
 
     @patch('sys.stdout', new_callable=StringIO)
-    def test_print_red(self, mock_stdout):
+    def test_print_green(self, mock_stdout):
         """Test print_green method of ColorPrinter class"""
         expected_output = "\x1b[1m\x1b[32mTest text\x1b[0m\n"
         ColorPrinter.print_green("Test text")
