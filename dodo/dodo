@@ -13,8 +13,6 @@ from dodo.formatters import formatter_factory
 
 def print_results(test_results):
     """Prints a result in nice formatted manner"""
-    print("RESULTS")
-    print("=" * 50)
 
     # Print results
     for func_name, result in test_results.items():
@@ -67,7 +65,7 @@ def main(testdirectory, file_format, output_file=None,
 if __name__ == "__main__":
     try:
         compiled_regex = None
-        testplan = set()
+        testplan = None
 
         # Create a main parser object.
         parser = argparse.ArgumentParser(
@@ -123,11 +121,13 @@ if __name__ == "__main__":
             # Read each line and create a set entry from it.
             # The reason we have used set instead of list is to avoid
             # duplication.
+            testplan = set()
             testplan_add = testplan.add
             with open(arguments.testplan) as testplan_file:
                 for line in testplan_file:
                     testplan_add(line.strip("\n"))
-
+            if len(testplan) == 0:
+                testplan = None
         main(arguments.testdirectory, arguments.format, arguments.file,
              compiled_regex, testplan)
 
